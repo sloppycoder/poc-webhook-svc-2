@@ -2,7 +2,6 @@ package org.vino9.demo.webhookservice.webhook;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +14,8 @@ import org.vino9.demo.webhookservice.data.WebhookRequest;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component
@@ -23,8 +24,7 @@ public class RequestListener {
   @Value("${webhook.executor-thread-pool-size:1}")
   int size = 5;
 
-  private ListeningExecutorService executor =
-      MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(size));
+  private ExecutorService executor = Executors.newFixedThreadPool(size);
   private WebhookInvoker invoker;
   private final ObjectMapper mapper;
 
@@ -39,10 +39,9 @@ public class RequestListener {
       concurrency = "1",
       groupId = "webhook-listner",
       topicPattern = "${webhook.topic-pattern}")
-  public void process(String message,
-                      @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
-                      Acknowledgment ack) {
-    WebhookRequest request = null;
+  public void process(
+      String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, Acknowledgment ack) {
+    WebhookRequest request;
     try {
       request = mapper.readValue(message, WebhookRequest.class);
     } catch (JsonProcessingException e) {
@@ -56,22 +55,37 @@ public class RequestListener {
               .build();
     }
 
-    // TODO: explore using CompletableFuture to replace this.
-    WebhookRequest finalRequest = request;
-    ListenableFuture<Long> savedId = executor.submit(() -> invoker.invoke(finalRequest));
-    Futures.addCallback(
-        savedId,
-        new FutureCallback<Long>() {
-          public void onSuccess(Long requestId) {
-            log.info("webhook success. saved to database with id {}", requestId);
-            ack.acknowledge();
-          }
+    invokerWebhookAsync(request, ack);
+  }
 
-          public void onFailure(Throwable thrown) {
-            log.info("webhook failed, ignore for now.");
-            ack.acknowledge();
+  private void invokerWebhookAsync(WebhookRequest request, Acknowledgment ack) {
+    var messageId = request.getMessageId();
+    var futureId = new CompletableFuture<Long>();
+    executor.submit(
+        () -> {
+          try {
+            var id = invoker.invoke(request);
+            futureId.complete(id);
+          } catch (RuntimeException ex) {
+            futureId.completeExceptionally(ex);
           }
-        },
-        executor);
+        });
+
+    futureId
+        .thenApply(
+                id -> {
+              log.info("webhook success for message {}, saved to database with id {}", messageId, id);
+              ack.acknowledge();
+              return id;
+            })
+        .handle(
+            (s, ex) -> {
+              log.info(
+                  "webhook failed for message {} due to {}, ignore for now",
+                  messageId,
+                  ex.getCause().getMessage());
+              ack.acknowledge();
+              return s;
+            });
   }
 }
