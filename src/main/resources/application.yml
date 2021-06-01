@@ -1,1 +1,40 @@
+server:
+  port: 8080
 
+spring:
+  application:
+    name: webhook-svc
+
+  datasource:
+    password: password
+    url: jdbc:postgresql://localhost:5432/poc
+    username: pocuser
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create
+
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    listener:
+      ack-mode: MANUAL
+    consumer:
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      group-id: webhook-svc
+
+webhook:
+  external-baseurl: http://localhost:9999
+  # topic pattern is a java.util.regex.Pattern
+  topic-pattern: "testx-webhook-topic-."
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,loggers
+
+logging:
+  level:
+    org.vino9.demo: DEBUG

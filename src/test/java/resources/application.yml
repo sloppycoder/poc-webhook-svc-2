@@ -1,0 +1,11 @@
+spring:
+    application:
+        name: webhook-svc
+    datasource:
+        url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    jpa:
+        database-platform: org.hibernate.dialect.H2Dialect
+        hibernate:
+            ddl-auto: create
+webhook:
+    external-baseurl: http://localhost:9999
