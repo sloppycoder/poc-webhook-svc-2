@@ -16,7 +16,7 @@ spring:
       ddl-auto: create
 
   kafka:
-    bootstrap-servers: 127.0.0.1:9092
+    bootstrap-servers: 192.168.20.71:9092
     listener:
       ack-mode: MANUAL
     consumer:
@@ -27,7 +27,7 @@ spring:
 webhook:
   external-baseurl: http://localhost:9999
   # topic pattern is a java.util.regex.Pattern
-  topic-pattern: "testx-webhook-topic-."
+  topic-pattern: "test-webhook-topic-[23]"
 
 management:
   endpoints:

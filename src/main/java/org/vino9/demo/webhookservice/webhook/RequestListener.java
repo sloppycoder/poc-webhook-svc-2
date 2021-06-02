@@ -56,11 +56,13 @@ public class RequestListener {
               .build();
     }
 
+    log.info("before invokeWebhookAsync");
     invokerWebhookAsync(request, ack);
+    log.info("after invokeWebhookAsync");
   }
 
   private void invokerWebhookAsync(WebhookRequest request, Acknowledgment ack) {
-    var messageId = request.getMessageId();
+    var messageId = request.getMessageId().substring(0,8);
       try {
           executor.submit(
               () -> {

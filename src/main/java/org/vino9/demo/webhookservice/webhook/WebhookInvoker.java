@@ -24,7 +24,7 @@ public class WebhookInvoker {
   public Long invoke(WebhookRequest request) {
     try {
       int duration = random.nextInt(5000);
-      log.info("sleeping for {} ms for message {}", duration, request.getMessageId());
+      log.info("sleeping for {} ms for message {}", duration, request.getMessageId().substring(0,8));
       Thread.sleep((long) duration);
       if (duration > 2500) {
         return request.getId();
