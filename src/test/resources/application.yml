@@ -1,4 +1,6 @@
 spring:
+  main:
+    banner-mode: off
   datasource:
     url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
   jpa:
@@ -14,3 +16,8 @@ spring:
 webhook:
   external-baseurl: http://localhost:9999
   topic-pattern: "test-webhook-topic-1"
+
+logging:
+  level:
+    ROOT: WARN
+    org.vino9.demo: INFO

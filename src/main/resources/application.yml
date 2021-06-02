@@ -34,3 +34,4 @@ management:
 logging:
   level:
     org.vino9.demo: DEBUG
+
