@@ -56,29 +56,39 @@ public class RequestListener {
               .build();
     }
 
-    log.info("before invokeWebhookAsync");
+    log.info("before invokerWebhookAsync");
     invokerWebhookAsync(request, ack);
-    log.info("after invokeWebhookAsync");
+    log.info("after invokerWebhookAsync");
   }
 
   private void invokerWebhookAsync(WebhookRequest request, Acknowledgment ack) {
-    var messageId = request.getMessageId().substring(0,8);
-      try {
-          executor.submit(
-              () -> {
-                try {
-                  var id = invoker.invoke(request);
-                  log.info("webhook success for message {}, saved to database with id {}", messageId, id);
-                } catch (RuntimeException ex) {
-                  log.info(
-                      "webhook failed for message {} due to {}, ignore for now",
-                      messageId,
-                      ex.getMessage());
-                }
-                ack.acknowledge();
-              }).get();
-      } catch (InterruptedException|ExecutionException ex) {
-          log.info("exception {}", ex.getMessage());
-      }
+    var messageId = request.getMessageId().substring(0, 8);
+    var futureId = new CompletableFuture<Long>();
+    executor.submit(
+        () -> {
+          try {
+            var id = invoker.invoke(request);
+            futureId.complete(id);
+          } catch (RuntimeException ex) {
+            futureId.completeExceptionally(ex);
+          }
+        });
+
+    futureId
+        .thenApply(
+                id -> {
+              log.info("webhook success for message {}, saved to database with id {}", messageId, id);
+              ack.acknowledge();
+              return id;
+            })
+        .handle(
+            (s, ex) -> {
+              log.info(
+                  "webhook failed for message {} due to {}, ignore for now",
+                  messageId,
+                  ex.getCause().getMessage());
+              ack.acknowledge();
+              return s;
+            });
   }
 }
