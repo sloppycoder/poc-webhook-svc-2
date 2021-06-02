@@ -19,10 +19,6 @@ spring:
     bootstrap-servers: 192.168.20.71:9092
     listener:
       ack-mode: MANUAL
-    consumer:
-      auto-offset-reset: latest
-      enable-auto-commit: false
-      group-id: webhook-svc
 
 webhook:
   external-baseurl: http://localhost:9999

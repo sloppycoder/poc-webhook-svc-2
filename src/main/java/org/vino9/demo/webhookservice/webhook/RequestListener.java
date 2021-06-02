@@ -12,10 +12,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import org.vino9.demo.webhookservice.data.WebhookRequest;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,7 +24,7 @@ public class RequestListener {
 
   private ExecutorService executor = Executors.newFixedThreadPool(size);
   private WebhookInvoker invoker;
-  private final ObjectMapper mapper;
+  private ObjectMapper mapper;
 
   @Autowired
   public RequestListener(WebhookInvoker invoker, ObjectMapper mapper) {
@@ -38,27 +35,21 @@ public class RequestListener {
   // topicPattern is a java.util.regex.Pattern
   @KafkaListener(
       concurrency = "1",
-      groupId = "webhook-listner",
+      groupId = "webhook-listener",
       topicPattern = "${webhook.topic-pattern}")
   public void process(
       String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, Acknowledgment ack) {
-    WebhookRequest request;
+
+    WebhookRequest request = null;
     try {
       request = mapper.readValue(message, WebhookRequest.class);
+      log.info("before invokerWebhookAsync for topic {}", topic);
+      invokerWebhookAsync(request, ack);
+      log.info("after invokerWebhookAsync");
     } catch (JsonProcessingException e) {
-      // invalid payload, for experiment sake, we just create a new request anyways.
-      request =
-          WebhookRequest.builder()
-              .clientId(topic)
-              .messageId(UUID.randomUUID().toString())
-              .messageType("WEBHOOK")
-              .createdAt(LocalDateTime.now())
-              .build();
+      log.info("invalid message received");
+      ack.acknowledge();
     }
-
-    log.info("before invokerWebhookAsync");
-    invokerWebhookAsync(request, ack);
-    log.info("after invokerWebhookAsync");
   }
 
   private void invokerWebhookAsync(WebhookRequest request, Acknowledgment ack) {
@@ -76,8 +67,9 @@ public class RequestListener {
 
     futureId
         .thenApply(
-                id -> {
-              log.info("webhook success for message {}, saved to database with id {}", messageId, id);
+            id -> {
+              log.info(
+                  "webhook success for message {}, saved to database with id {}", messageId, id);
               ack.acknowledge();
               return id;
             })
