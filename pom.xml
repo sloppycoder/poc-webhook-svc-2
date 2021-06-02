@@ -17,7 +17,6 @@
 		<java.version>11</java.version>
         <wiremock.version>2.28.0</wiremock.version>
         <wiremock-junit5.version>1.1.0</wiremock-junit5.version>
-        <kafka.testcontainer.version>1.15.3</kafka.testcontainer.version>
 	</properties>
 	<dependencies>
 		<dependency>

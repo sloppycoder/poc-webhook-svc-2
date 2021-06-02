@@ -13,7 +13,7 @@ import org.vino9.demo.webhookservice.data.WebhookRequest;
 import org.vino9.demo.webhookservice.webhook.RequestUtils;
 import org.vino9.demo.webhookservice.webhook.WebhookInvoker;
 
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
@@ -35,10 +35,9 @@ class KafkaListnerTests {
   void contextLoads() {}
 
   @Test
-  void message_triggers_webhook_invoker() throws Exception {
+  void message_triggers_webhook_invoker() {
     var request = RequestUtils.genDummyRequest(testTopic, "testing");
     template.send(testTopic, request);
-    Thread.sleep(3000L);
-    verify(invoker, times(1)).invoke(request);
+    verify(invoker, timeout(5000L).times(1)).invoke(request);
   }
 }
