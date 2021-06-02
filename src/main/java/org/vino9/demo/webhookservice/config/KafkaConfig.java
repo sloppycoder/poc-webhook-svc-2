@@ -1,5 +1,6 @@
 package org.vino9.demo.webhookservice.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@Slf4j
 @EnableKafka
 public class KafkaConfig {
 
@@ -25,8 +27,10 @@ public class KafkaConfig {
 
     // now use Spring's default Kafka settings from applicatoin.yml
     // They can be overridden by defining your own beans here.
+
     @Bean
     public ProducerFactory<String, WebhookRequest> producerFactory() {
+        log.info("producer using bootstrap-servers {}", bootstrapServers);
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -36,12 +40,13 @@ public class KafkaConfig {
 
     @Bean
     public ConsumerFactory<String, String> consumerFactory() {
+        log.info("consumer using bootstrap-servers {}", bootstrapServers);
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "org.vino9.demo.webhookservice.data");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         return new DefaultKafkaConsumerFactory<>(props);
     }
@@ -50,5 +55,4 @@ public class KafkaConfig {
     public KafkaTemplate<String, WebhookRequest> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
-
 }

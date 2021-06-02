@@ -33,5 +33,6 @@ management:
 
 logging:
   level:
+    root: WARN
     org.vino9.demo: DEBUG
 
