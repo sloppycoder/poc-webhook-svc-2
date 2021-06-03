@@ -29,11 +29,10 @@ Notes for embedded Kafka:
     topics = {"${webhook.topic-pattern}"})
 class RequestListnerTests {
 
-  @Autowired private KafkaTemplate<String, WebhookRequest> template;
-  @MockBean private WebhookInvoker invoker;
-
   @Value("${webhook.topic-pattern}")
   String testTopic;
+  @Autowired private KafkaTemplate<String, WebhookRequest> template;
+  @MockBean private WebhookInvoker invoker;
 
   @Test
   void message_triggers_webhook_invoker() throws Exception {

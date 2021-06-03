@@ -19,15 +19,13 @@ import java.util.stream.IntStream;
 @RestController
 @Slf4j
 public class SendTestRequestController {
-  private Random random = new Random();
-
+  private final KafkaTemplate<String, WebhookRequest> template;
   @Value("#{${webhook.external-url-mapppings}}")
   Map<String, String> topicMappings;
 
   ArrayList<String> topics;
   int nTopics;
-
-  private final KafkaTemplate<String, WebhookRequest> template;
+  private Random random = new Random();
 
   @Autowired
   public SendTestRequestController(KafkaTemplate<String, WebhookRequest> template) {

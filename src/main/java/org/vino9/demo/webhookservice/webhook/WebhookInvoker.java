@@ -17,10 +17,10 @@ import java.util.Random;
 @Component
 @Slf4j
 public class WebhookInvoker {
-  private RestTemplate template;
-  private Random random = new Random();
   final WebhookRequestRepository repository;
   final ObjectMapper mapper;
+  private RestTemplate template;
+  private Random random = new Random();
 
   @Autowired
   public WebhookInvoker(WebhookRequestRepository repository, ObjectMapper mapper) {

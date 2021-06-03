@@ -13,9 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest
 public class WebhookInvokerTests {
 
-  @Autowired private WebhookRequestRepository repository;
-
   @SpyBean WebhookInvoker invoker;
+  @Autowired private WebhookRequestRepository repository;
 
   @Test
   void invoke_saves_request_to_database() {
