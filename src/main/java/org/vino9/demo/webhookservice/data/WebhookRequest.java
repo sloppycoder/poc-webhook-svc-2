@@ -39,9 +39,14 @@ public class WebhookRequest {
   }
 
   private void setStatus(Status newStatus) {
-    LocalDateTime now = LocalDateTime.now();
     this.status = newStatus;
-    this.updatedAt = now;
+    this.updatedAt = LocalDateTime.now();
+  }
+
+  public WebhookRequest markRetry() {
+    setStatus(Status.RETRY);
+    this.retries += 1;
+    return this;
   }
 
   public enum Status {

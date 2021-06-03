@@ -21,7 +21,7 @@ spring:
       ack-mode: MANUAL
 
 webhook:
-  external-url-mapppings: "{'test-webhook-topic-2': 'http://localhost:9999/good', 'test-webhook-topic-3': 'http://localhost:9999/bad'}"
+  external-url-mapppings: "{'test-webhook-topic-2': 'http://localhost:9999/fast', 'test-webhook-topic-3': 'http://localhost:9999/slow'}"
   # topic pattern is a java.util.regex.Pattern
   topic-pattern: "test-webhook-topic-[23]"
 
