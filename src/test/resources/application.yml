@@ -9,12 +9,12 @@ spring:
       ddl-auto: create
 
   kafka:
-    bootstrap-servers: ${spring.embedded.kafka.brokers}
+    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9999}
     listener:
       ack-mode: MANUAL
 
 webhook:
-  external-baseurl: http://localhost:9999
+  external-url-mapppings: "{'test-webhook-topic-1': 'http://localhost:9999/test'}"
   topic-pattern: "test-webhook-topic-1"
 
 logging:

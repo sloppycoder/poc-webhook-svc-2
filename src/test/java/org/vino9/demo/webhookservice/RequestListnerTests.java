@@ -27,7 +27,7 @@ Notes for embedded Kafka:
 @EmbeddedKafka(
     partitions = 1,
     topics = {"${webhook.topic-pattern}"})
-class KafkaListnerTests {
+class RequestListnerTests {
 
   @Autowired private KafkaTemplate<String, WebhookRequest> template;
   @MockBean private WebhookInvoker invoker;
@@ -36,12 +36,9 @@ class KafkaListnerTests {
   String testTopic;
 
   @Test
-  void contextLoads() {}
-
-  @Test
-  void message_triggers_webhook_invoker() throws InterruptedException {
+  void message_triggers_webhook_invoker() throws Exception {
     Thread.sleep(1000L);
-    var request = RequestUtils.genDummyRequest(testTopic, "testing");
+    var request = RequestUtils.genDummyRequest(testTopic, "http://www.google.com", "testing");
     template.send(testTopic, request);
     verify(invoker, timeout(5000L).times(1)).invoke(request);
   }
