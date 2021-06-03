@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/slow"
+  },
+  "response": {
+    "status": 200,
+    "body": "OK",
+    "headers": {
+      "Content-Type": "text/plain"
+    },
+    "delayDistribution": {
+      "type": "lognormal",
+      "median": 10000,
+      "sigma": 0.7
+    }
+  }
+}
