@@ -2,6 +2,7 @@ package org.vino9.demo.webhookservice.webhook;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.influx.InfluxMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,8 @@ import java.util.stream.Collectors;
 @Component
 @Slf4j
 public class RequestListener {
+  private final InfluxMeterRegistry registry;
+
   @Value("${webhook.executor-thread-pool-size:1}")
   int size;
 
@@ -28,16 +31,18 @@ public class RequestListener {
   private ObjectMapper mapper;
 
   @Autowired
-  public RequestListener(WebhookInvoker invoker, ObjectMapper mapper) {
+  public RequestListener(WebhookInvoker invoker, ObjectMapper mapper, InfluxMeterRegistry registry) {
     this.invoker = invoker;
     this.mapper = mapper;
+    this.registry = registry;
   }
 
   @KafkaListener(
       concurrency = "2",
       groupId = "webhook-listener",
       topics = {"${webhook.topic}"})
-  public void process(String message, Acknowledgment ack, ConsumerRecord<String, Object> consumerRecord) {
+  public void process(
+      String message, Acknowledgment ack, ConsumerRecord<String, Object> consumerRecord) {
     log.info("received message."); // check thread id for log output
     updateTopicStats(consumerRecord);
 
@@ -91,10 +96,11 @@ public class RequestListener {
   void logKafkaOffsets() {
     var partitions =
         stats.keySet().stream()
-            .map(key -> String.format("%s=>%d", key, stats.get(key)))
+            .map(key -> String.format("%s -> %d", key, stats.get(key)))
             .collect(Collectors.joining(", "));
-    int n = ((ThreadPoolExecutor) executor).getActiveCount();
-    log.info("STATS: active thread {}, partition offsets: {} ", n, partitions);
+    int activeCount = ((ThreadPoolExecutor) executor).getActiveCount();
+    registry.gauge("svc_webhook_listner_executor_active_threads", activeCount);
+    log.info("STATS: active thread {}, partition offsets: {} ", activeCount, partitions);
   }
 
   private void updateTopicStats(ConsumerRecord<String, Object> consumerRecord) {

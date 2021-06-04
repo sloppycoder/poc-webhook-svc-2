@@ -16,7 +16,7 @@ spring:
       ddl-auto: create
 
   kafka:
-    bootstrap-servers: 192.168.20.71:9092
+    bootstrap-servers: gf63.local:9092
     listener:
       ack-mode: MANUAL
 
@@ -24,11 +24,19 @@ webhook:
   external-url-mapppings: "{'client-1': 'http://localhost:9999/fast', 'client-2': 'http://localhost:9999/slow'}"
   topic: "test-webhook-topic-2"
   executor-thread-pool-size: 10
+
 management:
   endpoints:
     web:
       exposure:
-        include: metrics,loggers
+        include: loggers
+  metrics:
+    export:
+      influx:
+        enabled: true
+        auto-create-db: false
+        uri: http://gf63.local:8086
+        db: poc
 
 logging:
   level:

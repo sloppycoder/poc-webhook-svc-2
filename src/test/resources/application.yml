@@ -21,3 +21,9 @@ logging:
   level:
     ROOT: WARN
     org.vino9.demo: INFO
+
+management:
+  metrics:
+    export:
+      influx:
+        enabled: false

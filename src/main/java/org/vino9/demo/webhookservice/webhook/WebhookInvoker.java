@@ -1,8 +1,11 @@
 package org.vino9.demo.webhookservice.webhook;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.influx.InfluxMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -24,14 +27,19 @@ import java.util.Map;
 public class WebhookInvoker {
   final WebhookRequestRepository repository;
   final ObjectMapper mapper;
+  final InfluxMeterRegistry registry;
   private final RestTemplate template;
 
   @Autowired
   public WebhookInvoker(
-      WebhookRequestRepository repository, ObjectMapper mapper, RestTemplate template) {
+      WebhookRequestRepository repository,
+      ObjectMapper mapper,
+      RestTemplate template,
+      InfluxMeterRegistry registry) {
     this.repository = repository;
     this.mapper = mapper;
     this.template = template;
+    this.registry = registry;
   }
 
   public WebhookRequest invoke(WebhookRequest request) {
@@ -40,20 +48,39 @@ public class WebhookInvoker {
     return request;
   }
 
-  private boolean callWebHookAndUpdateStatus(WebhookRequest request) {
+  @Timed("webhook.invocation.duration")
+  private void callWebHookAndUpdateStatus(WebhookRequest request) {
     var payload = extractPayload(request);
     String url = payload.get("url");
     String message = payload.get("message");
 
+    // prepare custom metrics
+    var prefix = "svc_webhook_invoker_";
+    var tag = request.getClientId();
+    var timer = registry.timer(prefix + "timer", tag);
+    var successCounter = registry.counter(prefix + "success", tag);
+    var failCounter = registry.counter(prefix + "fail", tag);
+
+    timer.record(() -> makeHttpCall(url, message, request));
+
+    if (WebhookRequest.Status.DONE == request.getStatus()) {
+      successCounter.increment();
+    } else if (WebhookRequest.Status.FAILED == request.getStatus()) {
+      failCounter.increment();
+    }
+    // do we need to record retry as well?
+  }
+
+  private void makeHttpCall(String url, String body, WebhookRequest request) {
+    // invoke the webhook and record result
     var headers = new HttpHeaders();
     headers.setContentType(MediaType.TEXT_PLAIN);
-    var requestEntity = new HttpEntity<>(message, headers);
+    var requestEntity = new HttpEntity<>(body, headers);
     try {
       var response = template.exchange(url, HttpMethod.POST, requestEntity, String.class);
       var status = response.getStatusCode();
       if (status.is2xxSuccessful()) { // is 1xx or 3xx considered successful?
         request.markDone();
-        return true;
       }
     } catch (HttpServerErrorException e) {
       // HttpServerErrorException is thrown when server returns 4xx or 5xx errors
@@ -70,8 +97,6 @@ public class WebhookInvoker {
       log.warn("failed to invoke webhook with exception {}", e);
       request.markFailed();
     }
-
-    return false;
   }
 
   private Map<String, String> extractPayload(WebhookRequest request) {
@@ -79,7 +104,7 @@ public class WebhookInvoker {
       TypeReference<HashMap<String, String>> typeRef = new TypeReference<>() {};
       return mapper.readValue(request.getPayload(), typeRef);
     } catch (Exception e) {
-      return null;
+      return Map.of("url", "", "message", "");
     }
   }
 }
