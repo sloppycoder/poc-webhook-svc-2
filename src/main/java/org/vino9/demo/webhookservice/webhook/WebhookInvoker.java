@@ -34,10 +34,10 @@ public class WebhookInvoker {
     this.template = template;
   }
 
-  public Long invoke(WebhookRequest request) {
+  public WebhookRequest invoke(WebhookRequest request) {
     callWebHookAndUpdateStatus(request);
     repository.save(request);
-    return request.getId();
+    return request;
   }
 
   private boolean callWebHookAndUpdateStatus(WebhookRequest request) {
@@ -47,7 +47,7 @@ public class WebhookInvoker {
 
     var headers = new HttpHeaders();
     headers.setContentType(MediaType.TEXT_PLAIN);
-    var requestEntity = new HttpEntity<String>(message, headers);
+    var requestEntity = new HttpEntity<>(message, headers);
     try {
       var response = template.exchange(url, HttpMethod.POST, requestEntity, String.class);
       var status = response.getStatusCode();
@@ -76,10 +76,9 @@ public class WebhookInvoker {
 
   private Map<String, String> extractPayload(WebhookRequest request) {
     try {
-      TypeReference<HashMap<String, String>> typeRef =
-          new TypeReference<HashMap<String, String>>() {};
+      TypeReference<HashMap<String, String>> typeRef = new TypeReference<>() {};
       return mapper.readValue(request.getPayload(), typeRef);
-    } catch (JsonProcessingException e) {
+    } catch (Exception e) {
       return null;
     }
   }

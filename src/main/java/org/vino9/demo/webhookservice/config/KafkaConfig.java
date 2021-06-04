@@ -12,6 +12,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.vino9.demo.webhookservice.data.WebhookRequest;
 
 import java.util.HashMap;
@@ -20,6 +21,7 @@ import java.util.Map;
 @Configuration
 @Slf4j
 @EnableKafka
+@EnableScheduling
 public class KafkaConfig {
 
   @Value("${spring.kafka.bootstrap-servers}")

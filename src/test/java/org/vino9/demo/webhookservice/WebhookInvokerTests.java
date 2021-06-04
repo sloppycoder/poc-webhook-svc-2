@@ -25,7 +25,7 @@ class WebhookInvokerTests {
   @SpyBean WebhookInvoker invoker;
   @Autowired private WebhookRequestRepository repository;
 
-  @Value("${webhook.topic-pattern}")
+  @Value("${webhook.topic}")
   String testTopic;
 
   @Test

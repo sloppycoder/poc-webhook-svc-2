@@ -7,7 +7,7 @@ spring:
 
   datasource:
     password: password
-    url: jdbc:postgresql://localhost:5432/poc
+    url: jdbc:postgresql://192.168.20.71:5432/poc
     username: pocuser
 
   jpa:
@@ -21,10 +21,9 @@ spring:
       ack-mode: MANUAL
 
 webhook:
-  external-url-mapppings: "{'test-webhook-topic-2': 'http://localhost:9999/fast', 'test-webhook-topic-3': 'http://localhost:9999/slow'}"
-  # topic pattern is a java.util.regex.Pattern
-  topic-pattern: "test-webhook-topic-[23]"
-
+  external-url-mapppings: "{'client-1': 'http://localhost:9999/fast', 'client-2': 'http://localhost:9999/slow'}"
+  topic: "test-webhook-topic-2"
+  executor-thread-pool-size: 10
 management:
   endpoints:
     web:

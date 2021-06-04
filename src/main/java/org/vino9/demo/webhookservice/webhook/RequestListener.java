@@ -3,26 +3,27 @@ package org.vino9.demo.webhookservice.webhook;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
-import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.vino9.demo.webhookservice.data.WebhookRequest;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import javax.annotation.PostConstruct;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
 public class RequestListener {
   @Value("${webhook.executor-thread-pool-size:1}")
-  int size = 5;
+  int size;
 
-  private ExecutorService executor = Executors.newFixedThreadPool(size);
+  private ConcurrentHashMap<String, Long> stats = new ConcurrentHashMap<>();
+  private ExecutorService executor;
   private WebhookInvoker invoker;
   private ObjectMapper mapper;
 
@@ -32,21 +33,20 @@ public class RequestListener {
     this.mapper = mapper;
   }
 
-  // topicPattern is a java.util.regex.Pattern
   @KafkaListener(
-      concurrency = "1",
+      concurrency = "2",
       groupId = "webhook-listener",
-      topicPattern = "${webhook.topic-pattern}")
-  public void process(
-      String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, Acknowledgment ack) {
+      topics = {"${webhook.topic}"})
+  public void process(String message, Acknowledgment ack, ConsumerRecord<String, Object> consumerRecord) {
+    log.info("received message."); // check thread id for log output
+    updateTopicStats(consumerRecord);
 
-    WebhookRequest request = null;
+    WebhookRequest request;
     try {
       request = mapper.readValue(message, WebhookRequest.class);
-      log.info("before invokerWebhookAsync for topic {}", topic);
       invokerWebhookAsync(request, ack);
-      log.info("after invokerWebhookAsync");
     } catch (JsonProcessingException e) {
+      // TODO: put into DLQ topic?
       log.info("invalid message received");
       ack.acknowledge();
     }
@@ -54,24 +54,27 @@ public class RequestListener {
 
   private void invokerWebhookAsync(WebhookRequest request, Acknowledgment ack) {
     var messageId = request.getMessageId().substring(0, 8);
-    var futureId = new CompletableFuture<Long>();
+    var futureRequest = new CompletableFuture<WebhookRequest>();
     executor.submit(
         () -> {
           try {
             var id = invoker.invoke(request);
-            futureId.complete(id);
+            futureRequest.complete(id);
           } catch (RuntimeException ex) {
-            futureId.completeExceptionally(ex);
+            futureRequest.completeExceptionally(ex);
           }
         });
 
-    futureId
+    futureRequest
         .thenApply(
-            id -> {
+            r -> {
               log.info(
-                  "webhook success for message {}, saved to database with id {}", messageId, id);
+                  "webhook request message {} saved to database with id {} and status {}",
+                  messageId,
+                  r.getId(),
+                  r.getStatus());
               ack.acknowledge();
-              return id;
+              return r;
             })
         .handle(
             (s, ex) -> {
@@ -82,5 +85,25 @@ public class RequestListener {
               ack.acknowledge();
               return s;
             });
+  }
+
+  @Scheduled(fixedRate = 5000, initialDelay = 5000L)
+  void logKafkaOffsets() {
+    var partitions =
+        stats.keySet().stream()
+            .map(key -> String.format("%s=>%d", key, stats.get(key)))
+            .collect(Collectors.joining(", "));
+    int n = ((ThreadPoolExecutor) executor).getActiveCount();
+    log.info("STATS: active thread {}, partition offsets: {} ", n, partitions);
+  }
+
+  private void updateTopicStats(ConsumerRecord<String, Object> consumerRecord) {
+    var key = String.format("%s-%d", consumerRecord.topic(), consumerRecord.partition());
+    stats.put(key, consumerRecord.offset());
+  }
+
+  @PostConstruct
+  private void initExecutor() {
+    this.executor = Executors.newFixedThreadPool(size);
   }
 }

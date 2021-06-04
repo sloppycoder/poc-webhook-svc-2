@@ -14,8 +14,8 @@ spring:
       ack-mode: MANUAL
 
 webhook:
-  external-url-mapppings: "{'test-webhook-topic-1': 'http://localhost:9999/test'}"
-  topic-pattern: "test-webhook-topic-1"
+  external-url-mapppings: "{'client-1': 'http://localhost:9999/test'}"
+  topic: "test-webhook-topic-1"
 
 logging:
   level:

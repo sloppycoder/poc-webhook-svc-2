@@ -26,10 +26,10 @@ Notes for embedded Kafka:
 @DirtiesContext
 @EmbeddedKafka(
     partitions = 1,
-    topics = {"${webhook.topic-pattern}"})
+    topics = {"${webhook.topic}"})
 class RequestListnerTests {
 
-  @Value("${webhook.topic-pattern}")
+  @Value("${webhook.topic}")
   String testTopic;
   @Autowired private KafkaTemplate<String, WebhookRequest> template;
   @MockBean private WebhookInvoker invoker;
